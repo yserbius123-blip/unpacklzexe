@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # unpacklzexe.py by Sam Russell <sam.h.russell@gmail.com>
+# updated in 2026 by yserbius https://github.com/yserbius123-blip
 # Written May 2015
 
 import struct
@@ -8,7 +9,7 @@ import json
 def parseheader(header):
   fields = struct.unpack('<HHHHHHHHHHHHHH', header)
   headerdata = {}
-  headerdata['signature'] = ''.join([chr(fields[0] & 0xFF), chr(fields[0] >> 8)])
+  headerdata['signature'] = bytes([fields[0] & 0xFF, fields[0] >> 8])
   headerdata['partpage'] = fields[1]
   headerdata['pagecnt'] = fields[2]
   headerdata['relocnt'] = fields[3]
@@ -27,8 +28,8 @@ def parseheader(header):
 
 def generateheader(headerdata):
   headerbase = struct.pack('<BBHHHHHHHHHHHHH',
-                            ord(headerdata['signature'][0]),
-                            ord(headerdata['signature'][1]),
+                            headerdata['signature'][0],
+                            headerdata['signature'][1],
                             headerdata['partpage'],
                             headerdata['pagecnt'],
                             headerdata['relocnt'],
@@ -45,12 +46,12 @@ def generateheader(headerdata):
   return headerbase
 
 def checksignaturelz91(checkstring):
-  if checkstring == "LZ91":
+  if checkstring == b"LZ91":
     return True
   return False
 
 def unpacklz91data(indata):
-  outdata = ""
+  outdata = b""
   si = 0
   dx = 0x10
   bp = struct.unpack('<H', indata[si:si+2])[0]
@@ -65,7 +66,7 @@ def unpacklz91data(indata):
       si = si + 2
       dx = 0x10
     if bit == 1:
-      outdata = outdata + indata[si]
+      outdata = outdata + indata[si:si+1]
       si = si + 1
       continue
     cx = 0
@@ -98,7 +99,7 @@ def unpacklz91data(indata):
       si = si + 1
       bx = tempbyte - 0x100
       for i in range(cx):
-        tempbyte = outdata[bx]
+        tempbyte = bytes([outdata[bx]])
         outdata = outdata + tempbyte
       continue
     ax = struct.unpack('<H', indata[si:si+2])[0]
@@ -113,7 +114,7 @@ def unpacklz91data(indata):
     if ah != 0:
       cx = ah + 2
       for i in range(cx):
-        tempbyte = outdata[bx]
+        tempbyte = bytes([outdata[bx]])
         outdata = outdata + tempbyte
       continue
     al = struct.unpack('<B', indata[si:si+1])[0]
@@ -123,14 +124,14 @@ def unpacklz91data(indata):
     if al != 1:
       cx = al + 1
       for i in range(cx):
-        tempbyte = outdata[bx]
+        tempbyte = bytes([outdata[bx]])
         outdata = outdata + tempbyte
       continue
     # byte 0x01 is a signal to rephrase the current mem pointer
     # this makes sense under DOS, but is unnecessary here with no 16-bit segments
     #if al != 1:
-    #  print "si: %04X di:%04X al should be 1 but is %02X" % (si, len(outdata), al)
-    #print "pretending to realign segments"
+    #  print("si: %04X di:%04X al should be 1 but is %02X" % (si, len(outdata), al))
+    #print("pretending to realign segments")
   return outdata
 
 def unpacklz91reloc(relocdata):
@@ -160,7 +161,7 @@ def unpacklz91reloc(relocdata):
     dx = dx + ax
     es = dx
     relocoutstr = relocoutstr + struct.pack('<HH', di, es)
-  return relocoutstr
+  return bytes(relocoutstr)
 
 def unpacklz91(data, outfile):
   header = data[:0x1C]
@@ -190,7 +191,7 @@ def unpacklz91(data, outfile):
   # now just to generate new header and build exe
   # deal with partpage and pagecnt after we do relocs
   # number of relocs = len(unpackedreloc)/4
-  headerdata['relocnt'] = len(unpackedreloc)/4
+  headerdata['relocnt'] = len(unpackedreloc)//4
   # header is now 0x1C + relocnt*4 and round up to nearest 0x10
   headersize = headerdata['relocnt']*4 + 0x1C
   extra = headersize % 0x10
@@ -199,16 +200,16 @@ def unpacklz91(data, outfile):
     padbytes = 0x10 - extra
   headersize = headersize + padbytes
   # remember we need padding on end of header
-  padding = ''.join(['\x00' for x in range(padbytes)])
-  headerdata['hdrsize'] = headersize/0x10
+  padding = b''.join([b'\x00' for x in range(padbytes)])
+  headerdata['hdrsize'] = headersize//0x10
   # can now calculate total file size
   filesize = headersize + len(unpackeddata)
   headerdata['partpage'] = filesize % 0x200
-  headerdata['pagecnt'] = filesize / 0x200
+  headerdata['pagecnt'] = filesize // 0x200
   if headerdata['partpage'] > 0:
     headerdata['pagecnt'] = headerdata['pagecnt'] + 1
   lessmemory = len(unpackeddata) - len(packeddata)
-  headerdata['minalloc'] = headerdata['minalloc'] - lessmemory/0x10
+  headerdata['minalloc'] = headerdata['minalloc'] - lessmemory//0x10
   headerdata['maxalloc'] = 0xffff
   headerdata['chksum'] = 0
   # file data for loading
@@ -221,13 +222,13 @@ def unpacklz91(data, outfile):
   # we are now good to go
   newheader = generateheader(headerdata)
   # now write newheader + unpackedreloc + padding + unpackeddata
-  fout = open(outfile, 'w')
+  fout = open(outfile, 'wb')
   fout.write(newheader + unpackedreloc + padding + unpackeddata)
   return 1
 
 def unpacklzexe(data, outfile):
   if checksignaturelz91(data[0x1c:0x20]):
-    print "Detected LZ91 file"
+    print("Detected LZ91 file")
     return unpacklz91(data, outfile)
   return None
 
@@ -240,12 +241,10 @@ if __name__ == '__main__':
   parser.add_argument('outfile')
   args = parser.parse_args()
   filename = args.infile
-  f = open(filename, 'r')
+  f = open(filename, 'rb')
   data = f.read()
   unpacked = unpacklzexe(data, args.outfile)
   if unpacked:
-    print "Done"
+    print("Done")
   else:
-    print "Not a valid LZ91 file, could not unpack"
-
-
+    print("Not a valid LZ91 file, could not unpack")
