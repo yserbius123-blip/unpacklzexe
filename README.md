@@ -1,10 +1,12 @@
 # unpacklzexe
-Python unpacker for LZ91 packed EXE files
+Python unpacker for LZ91 packed EXE files updated to use Python 3. 
+Forked from https://github.com/samrussell/unpacklzexe
 
 ## Current features
 - Unpacks LZ91 EXEs
 - Doesn't unpack LZ90
 - Tested on the commander keen series
+- Tested on Galactix
 
 ## Usage
 ./unpacklzexe.py input.exe output.exe
@@ -32,4 +34,3 @@ Overlay number: 0x0000
 My reversing skills are a bit rusty, so I tried reversing one of my old favorite games. The first step involved unpacking the EXE before I could disassemble it, so I figured reversing the unpacking code would be useful
 
 I hope a python version of UNLZEXE will be useful for others. The code for the actual decompression is a bit gnarly (built directly from the disassembly!), but the rest of it should hopefully make sense and be helpful.
-
