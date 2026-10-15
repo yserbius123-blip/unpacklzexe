@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # header.py by Sam Russell <sam.h.russell@gmail.com>
+# updated by yserbius in 2026 https://github.com/yserbius123-blip
 # Written May 2015
 
 import struct
@@ -21,19 +22,18 @@ def parseheader(header):
   reloctableoffset = fields[12]
   overlaynumber = fields[13]
 
-  print "Signature: %s" % signature
-  print "Last block size: 0x%04X" % lastblocksize
-  print "Number of blocks: 0x%04X" % numblocks
-  print "Entries in reloc table: 0x%04X" % relocentries
-  print "Number of paragraphs: 0x%04X" % headerparagraphs
-  print "Memory required: 0x%04X" % minextraparagraphs
-  print "Maximum memory requested: 0x%04X" % maxextraparagraphs
-  print "Stack SS:SP: %04X:%04X" % (ss, sp)
-  print "Checksum: 0x%04X" % checksum
-  print "Initial CS:IP: %04X:%04X" % (cs, ip)
-  print "Offset of reloc table: 0x%04X" % reloctableoffset
-  print "Overlay number: 0x%04X" % overlaynumber
-
+  print(("Signature: %s" % signature))
+  print(("Last block size: 0x%04X" % lastblocksize))
+  print(("Number of blocks: 0x%04X" % numblocks))
+  print(("Entries in reloc table: 0x%04X" % relocentries))
+  print(("Number of paragraphs: 0x%04X" % headerparagraphs))
+  print(("Memory required: 0x%04X" % minextraparagraphs))
+  print(("Maximum memory requested: 0x%04X" % maxextraparagraphs))
+  print(("Stack SS:SP: %04X:%04X" % (ss, sp)))
+  print(("Checksum: 0x%04X" % checksum))
+  print(("Initial CS:IP: %04X:%04X" % (cs, ip)))
+  print(("Offset of reloc table: 0x%04X" % reloctableoffset))
+  print(("Overlay number: 0x%04X" % overlaynumber))
 
 if __name__ == '__main__':
   import argparse
@@ -41,7 +41,7 @@ if __name__ == '__main__':
   parser.add_argument('filename')
   args = parser.parse_args()
   filename = args.filename
-  f = open(filename, 'r')
+  f = open(filename, 'rb')
   header = f.read(0x1C)
   parseheader(header)
 
